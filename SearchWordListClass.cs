@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Xml;
 
-namespace DSAEHonours
+namespace DSAEHonoursGUI
 {
     public class SearchWordList
     {
@@ -16,11 +16,11 @@ namespace DSAEHonours
         {
             if (filePath.Contains(".xml"))
             {
-                ReadInXMLFile(filePath, ListSearchWords = new List<SearchWord>());
+                ReadInXMLSearch(filePath, ListSearchWords = new List<SearchWord>());
             } 
             else if (filePath.Contains(".txt"))
             {
-                ReadInTextFile(filePath, ListSearchWords = new List<SearchWord>());
+                ReadInTextSearch(filePath, ListSearchWords = new List<SearchWord>());
             }
             
         }
@@ -40,14 +40,14 @@ namespace DSAEHonours
 
         public override string ToString()
         {
-            return string.Join('\n', ListSearchWords);
+            return string.Join("\n", ListSearchWords);
         }
         /// <summary>
         /// Reads in the XML Search List file and populates the Search Word List object
         /// </summary>
         /// <param name="filename"></param>
         /// <returns></returns>
-        protected static void ReadInXMLFile(string filePath, List<SearchWord> SearchList)
+        protected static void ReadInXMLSearch(string filePath, List<SearchWord> SearchList)
         {
             try
             {
@@ -75,7 +75,7 @@ namespace DSAEHonours
             }
         }
 
-        protected static void ReadInTextFile(string filepath, List<SearchWord> SearchList)
+        protected static void ReadInTextSearch(string filepath, List<SearchWord> SearchList)
         // Reads in a file to build all the different search word objects
         {
             if (!File.Exists(filepath))
@@ -122,7 +122,7 @@ namespace DSAEHonours
         public IEnumerable<string> GetAllWordForms()
         {
             return ListSearchWords
-                .SelectMany(word => word.headwords.Concat(word.wordVars));
+                .SelectMany(word => word.Headwords.Concat(word.WordVars));
         }
         /// <summary>
         /// Returns only the heardwords found inside the SearchWordList object
@@ -130,7 +130,7 @@ namespace DSAEHonours
         /// <returns></returns>
         public IEnumerable<string> GetHeadWords()
         {
-            return ListSearchWords.SelectMany(word => word.headwords);
+            return ListSearchWords.SelectMany(word => word.Headwords);
         }
         /// <summary>
         /// Subclass to model the DSAE's search list of desired words taken from a text file
@@ -141,27 +141,27 @@ namespace DSAEHonours
             /// <summary>
             /// Canonical form of the word
             /// </summary>
-            public List<string> headwords { get; private set; }
+            public List<string> Headwords { get; private set; }
             /// <summary>
             /// List of the variations of the headword
             /// </summary>
-            public List<string> wordVars { get; private set; }
+            public List<string> WordVars { get; private set; }
 
             /// <summary>
             /// Simple Constructor
             /// </summary>
             /// <param name="HeadWord"></param>
             /// <param name="WordVars"></param>
-            public SearchWord(List<string> HeadWord, List<string> WordVars)
+            public SearchWord(List<string> headWord, List<string> wordVars)
             {
-                headwords = HeadWord;
-                wordVars = WordVars;
+                Headwords = headWord;
+                WordVars = wordVars;
             }
 
             public override string ToString()
             {
-                return (headwords.Count == 0 ? "" : $"\nHeadword(s): {string.Join(", ", headwords)}") +
-                       (wordVars.Count == 0 ? "" : $"\n\nWord Vars: \n\t{string.Join("\n\t", wordVars)}\n\n\n");
+                return (Headwords.Count == 0 ? "" : $"\nHeadword(s): {string.Join(", ", Headwords)}") +
+                       (WordVars.Count == 0 ? "" : $"\n\nWord Vars: \n\t{string.Join("\n\t", WordVars)}\n\n\n");
             }
         }
     }

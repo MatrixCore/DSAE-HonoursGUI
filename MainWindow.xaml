@@ -7,6 +7,8 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        
+        <TextBox HorizontalAlignment="Left" Height="330" Margin="532,27,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="235"/>
+        <Button Content="Begin Scrapping" HorizontalAlignment="Left" Margin="39,365,0,0" VerticalAlignment="Top" Width="129" Click="Button_Click"/>
+
     </Grid>
 </Window>

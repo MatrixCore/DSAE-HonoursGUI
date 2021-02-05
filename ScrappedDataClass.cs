@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using HtmlAgilityPack;
+﻿using System.Collections.Generic;
 
-namespace DSAEHonours
+namespace DSAEHonoursGUI
 {
     /// <summary>
     ///    Class to hold data scrapped from web pages
@@ -39,11 +35,7 @@ namespace DSAEHonours
         /// <summary>
         /// Text taken from the body of the news article
         /// </summary>
-        public string articleBody { get; }
-        /// <summary>
-        /// Save location of the original HTML document
-        /// </summary>
-        public string HTMLsavePath { get; }
+        public string ArticleText { get; }
         /// <summary>
         /// A collection of quote objects found within the body of the parsed text
         /// </summary>
@@ -53,28 +45,27 @@ namespace DSAEHonours
         /// </summary>
         /// <param name="temp"></param>
 
-        public ScrappedData(string title, string url, string rss, string author, string description, string body, string savepath)
+        public ScrappedData(string title, string url, string rss, string author, string description, string text)
         {
             Title = title;
             URL = url;
             Author = author;
             Descript = description;
-            articleBody = body;
-            HTMLsavePath = savepath;
+            ArticleText = text;
             RSS_Source = rss;
         }
 
-        public void addQuotes(Quote single)
+        public void AddQuotes(Quote single)
         {
             FoundQuotes.Add(single);
         }
 
-        public void addQuotes(List<Quote> quotes)
+        public void AddQuotes(List<Quote> quotes)
         {
             FoundQuotes.AddRange(quotes);
         }
 
-        public void setPublishedDate(string date)
+        public void SetPublishedDate(string date)
         {
             PublishedDate = date;
         }
@@ -85,20 +76,6 @@ namespace DSAEHonours
         public override string ToString()
         {
             return $"URL: {URL},\n Title: {Title}\nAuthor: {Author}\nDescription: {Descript},\nPublished Date: {PublishedDate}\n";
-        }
-
-        public HtmlDocument Loadhtml(HtmlDocument doc)
-        {
-            try
-            {
-                doc.LoadHtml(File.ReadAllText(HTMLsavePath));
-                return doc;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-                return null;
-            }
         }
     }
 }

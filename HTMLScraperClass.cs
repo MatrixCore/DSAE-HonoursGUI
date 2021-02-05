@@ -14,7 +14,7 @@ using System.Text.RegularExpressions;
 /// <summary>
 /// Namespace for the entire project
 /// </summary>
-namespace DSAEHonours
+namespace DSAEHonoursGUI
 {
     public class HTMLScraper
     {
@@ -27,44 +27,44 @@ namespace DSAEHonours
         /// </summary>
         /// <param name="URLs"></param>
         /// <returns></returns>
-        public static IEnumerable<ScrappedData> processUrls(IEnumerable<Tuple<string, string>> URLs, bool ArchivePage = false)
+        public static IEnumerable<ScrappedData> ProcessUrls(IEnumerable<Tuple<string, string>> URLs)
         {
             // Poential change: Don't save the whole document, rather use getTextNodes() to grab the article body and drop the request of the HTML document as nothing else is being used 
             // Still archive the HTML document but only keep the article body in memory
-
-            //int count = 0;
             return URLs.AsParallel().Select(address =>
             {
                 try
                 {
-
+                    bool doProcess = true;
                     var web = new HtmlWeb();
                     var html = web.Load(address.Item1);
                     if (web.StatusCode != HttpStatusCode.OK) { throw new Exception($"Web status (processUrls): {web.StatusCode}"); }
                     // Check for 302 or 500 code
                     // Gets last HTTP status code and throws exception if not == OK (200)
-                    var text = GetTextNodes(html, address.Item2);
-                    if (ArchivePage)
+                    var text = GetTextNode(html, address.Item2);
+
+                    if (!File.Exists(Directory.GetCurrentDirectory() + @"\files\URLtable.txt"))
                     {
-                        var workDir = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.Parent.FullName;
-                        string currDir = workDir + @"\output\HTMLpages\" + urlPattern.Match(address.Item1).Groups["domain"].Value;
-                        // extracts the domain of each url to group the sources 
-                        Directory.CreateDirectory(currDir);
-                        var numFiles = Directory.GetFiles(currDir).Length;
-                        string savepath = workDir + $@"\output\HTMLpages\{urlPattern.Match(address.Item1).Groups["domain"].Value}\html{numFiles + 1}.html";
-
-                        // URL to File Name table 
-                        var writer = File.AppendText(workDir + @"\output\HTMLpages\HTMLhashtable.txt");
-                        writer.WriteLine(address.Item1, $@"{urlPattern.Match(address.Item1).Groups["domain"].Value}\html{ numFiles + 1}");
-                        writer.Close();
-
-                        File.WriteAllText(savepath, html.Text);
-                        return new { Doc = html, Url = address, SavePath = savepath, body = text };
+                        File.Create(Directory.GetCurrentDirectory() + @"\files\URLtable.txt");
                     }
                     else
                     {
-                        return new { Doc = html, Url = address, SavePath = "", body = text };
+                        doProcess = !File.ReadAllLines(Directory.GetCurrentDirectory() + @"\files\URLtable.txt")
+                        .ToList().Contains(address.Item1);
+                        // Used to control further processing, if the url is already recorded then do not process further 
                     }
+
+                    if (doProcess)
+                    {
+                        TextWriter writer = new StreamWriter(Directory.GetCurrentDirectory() + @"\files\URLtable.csv", true);
+                        writer.WriteLine($"{address.Item1}, {DateTime.Today.ToString("d")}");
+
+                        return new { Doc = html, Url = address, body = text };
+                    }
+                    else
+                    {
+                        return null;
+                    }                    
                 }
                 catch (Exception e)
                 {
@@ -73,61 +73,60 @@ namespace DSAEHonours
                 }
             })
             .Select(data =>
-            {
+             { // Search through the head tag to find meta data
                 if (data == null) { return null; }
-                //Console.WriteLine($"Read {++count} url: {data.Url.Item1}");
-                return getPublishedDate(data.Doc, data.Url.Item2, new ScrappedData(
-                    // Search through the head tag to find meta data
+                return GetPublishedDate(data.Doc, data.Url.Item2, new ScrappedData( 
+                    // Publication date tags vary from outlet to outlet so once the common data 
+                    // has been extracted, the html page is passed to a method to record the published 
                     title: data?.Doc?.DocumentNode?.SelectSingleNode("//head/title")?.InnerText,
                     author: data?.Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='author']")?.Attributes["content"]?.Value,
                     description: data?.Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='description']")?.Attributes["content"]?.Value,
-                    body: data?.body,
+                    text: data?.body,
                     url: data?.Url.Item1,
-                    savepath: data?.SavePath == "" ? null : data?.SavePath,
-                    // Checks if there is a SavePath in the tuple, otherwise it is nulled
                     rss: data?.Url.Item2
                     ));
             });
-        }      
+        }
 
         /// <summary>
-        /// Due to the different ways web pages store their publication date, this message needs to pull that info depending on which publciation the HTML comes from
+        /// Due to the different ways web pages store their publication date, this method needs to pull that info depending on which publciation the HTML comes from
         /// </summary>
         /// <param name="incomplete"></param>
         /// <param name="doc"></param>
-        /// <returns></returns>
-        private static ScrappedData getPublishedDate(HtmlDocument Doc, string source, ScrappedData incomplete)
+        /// <returns>Returns an updated ScrappedData object with the published date field filled</returns>
+        private static ScrappedData GetPublishedDate(HtmlDocument Doc, string source, ScrappedData page)
         {
             try
             {
                 if (source.Contains("News24"))
                 {
-                    incomplete.setPublishedDate(Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='publisheddate']")?.Attributes["content"]?.Value);
+                    page.SetPublishedDate(Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='publisheddate']")?.Attributes["content"]?.Value);
                 }
                 else if (source.Contains("Eyewitness News") || source.Contains("IOL"))
                 {
-                    incomplete.setPublishedDate(Doc?.DocumentNode?.SelectSingleNode("//meta[@itemprop = 'datePublished']")?.Attributes["content"]?.Value);
+                    page.SetPublishedDate(Doc?.DocumentNode?.SelectSingleNode("//meta[@itemprop = 'datePublished']")?.Attributes["content"]?.Value);
                 }
                 else if (source.Contains("BusinessLIVE") || source.Contains("TimesLIVE"))
                 {
-                    incomplete.setPublishedDate(Doc.DocumentNode.SelectSingleNode("//div[@class = 'article-pub-date ']").Attributes["content"].Value); // Not working for either
+                    page.SetPublishedDate(Doc.DocumentNode.SelectSingleNode("//div[@class = 'article-pub-date ']").Attributes["content"].Value); // Not working for either
                 }
                 else if (source.Contains("SowetanLIVE"))
                 {
-                    incomplete.setPublishedDate(Doc.DocumentNode.SelectSingleNode("//span[@class = 'article-pub-date']").Attributes["content"].Value); // Not working
+                    page.SetPublishedDate(Doc.DocumentNode.SelectSingleNode("//span[@class = 'article-pub-date']").Attributes["content"].Value); // Not working
                 }
                 else
                 {
-                    incomplete.setPublishedDate("Unknown");
+                    page.SetPublishedDate("Unknown");
                 }
 
-                return incomplete;
+                return page;
 
-            }catch(Exception e)
+            }
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                incomplete.setPublishedDate("Unknown");
-                return incomplete;
+                page.SetPublishedDate("Unknown");
+                return page;
             }
         }
 
@@ -135,14 +134,15 @@ namespace DSAEHonours
         /// Returns all the text found in the article body of a single News Story
         /// </summary>
         /// <param name="DocNode"></param>
-        /// <returns></returns>
-        public static string GetTextNodes(HtmlDocument doc, string RSSsource)
+        /// <returns>The inner next of what would the article node of the respective article</returns>
+        public static string GetTextNode(HtmlDocument doc, string RSSsource)
         {
-            // EWN -> <span itemprop="articleBody">                             RSS Feed title = "Eyewitness News | Latest News ( Local )"
-            // News24 -> <div class="article__body">                            RSS Feed title = "News24 South Africa"
-            // BusinessLive -> <div class=wrap>  <div class=text>               RSS Feed title = "BusinessLIVE > news ".trim()
-            // IOL -> <div itemProp="articleBody">                              Rss Feed title = "IOL section feed for South Africa"
-            // TimesLive -> hot mess
+            // EWN -> <span itemprop="articleBody">                             
+            // News24 -> <div class="article__body">                            
+            // BusinessLive -> <div class=wrap>  <div class=text>               
+            // IOL -> <div itemProp="articleBody">                              
+            // TimesLive -> Same as BusinessLive and SowetanLive
+            //           -> <div[class = 'wrap']> <div[class = 'text']>
             try
             {
                 if (RSSsource.Contains("Eyewitness"))
@@ -155,18 +155,7 @@ namespace DSAEHonours
                     return doc.DocumentNode.SelectSingleNode("//div[@class = 'article__body']").InnerText;
                 }
                 else
-                if (RSSsource.Contains("BusinessLIVE"))
-                {
-                    return doc.DocumentNode.SelectSingleNode("//div[@class = 'wrap']/div[@class = 'text']").InnerText;
-                }
-
-                else
-                if (RSSsource.Contains("TimesLIVE"))
-                {
-                    return doc.DocumentNode.SelectSingleNode("//div[@class = 'wrap']/div[@class = 'text']").InnerText;
-                }
-                else
-                if (RSSsource.Contains("SowetanLIVE"))
+                if (RSSsource.Contains("BusinessLIVE") || RSSsource.Contains("TimesLIVE") || RSSsource.Contains("SowetanLIVE"))
                 {
                     return doc.DocumentNode.SelectSingleNode("//div[@class = 'wrap']/div[@class = 'text']").InnerText;
                 }
@@ -174,16 +163,6 @@ namespace DSAEHonours
                 if (RSSsource.Contains("IOL"))
                 {
                     return doc.DocumentNode.SelectSingleNode("//div[@itemprop = 'articleBody']").InnerText;
-                }
-                else
-                if (RSSsource.Contains("Daily Maverick"))
-                {
-                    return doc.DocumentNode.SelectSingleNode("").InnerText;
-                }
-                else
-                if (RSSsource.Contains("Politicsweb"))
-                {
-                    return doc.DocumentNode.SelectSingleNode("//div[@class = 'article-container']").InnerText;
                 }
 
                 else { throw new Exception("Unrecognized RSS feed source"); }
@@ -194,26 +173,50 @@ namespace DSAEHonours
                 return null;
             }
         }
-
-        private static string SantizeText(string Splittext)
+        /// <summary>
+        /// Method used to remove unwanted HTML artifcats and adds in whitespaces where needed for further processing
+        /// </summary>
+        /// <param name="Splittext"></param>
+        /// <returns></returns>
+        private static string SanitizeText(string Splittext)
         {
             //cases like letter.letter or letter." or letter.'
-
+            // Use Regex as you have more control
+            // Something like: {letter}?{letter} is replaced with {letter}?{whitespace}{letter}
             // OR HTML Ampersand Character Codes like &quot
-            // Use String.replace() instead of Regex, less resource intesive
+            string originalText = Splittext;
+            try
+            {
+                Splittext = Splittext.Replace("&nbsp", " ");
+                Splittext = Splittext.Replace("&ndash", "-");
 
-            return Splittext.Replace(",", " ");
+                var periodRegex = new Regex("(Letter1)[a-zA-Z].(Letter2)[a-zA-Z]");
+                var questionRegex = new Regex("(Letter1)[a-zA-Z]?(Letter2)[a-zA-Z]");
+                var exclamationRegex = new Regex("(Letter1)[a-zA-Z]!(Letter2)[a-zA-Z]");
+
+                //Splittext = periodRegex.Replace(Splittext, $"{Letter1}.{letter2}");
+                //Splittext = questionRegex.Replace(Splittext, $"{Letter1}.{letter2}");
+                //Splittext = exclamationRegex.Replace(Splittext, $"{Letter1}.{letter2}");
+
+                return Splittext.Replace(",", " ");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("(SanitizeText)" + e.Message);
+                return originalText;
+                // if the santizion fails, just return the original string and continue
+            }
         }
 
         /// <summary>
-        /// 
+        /// Method used to seperate article text and examine each word for a match in the search list using different methods
         /// </summary>
         public static List<Quote> FindSearchWords(ScrappedData data, SearchWordList searchWordList, int mode)
         {
-            var splitText = SantizeText(data.articleBody)
+            var splitText = SanitizeText(data.ArticleText)
                      .Split(' ')
                      .Where(str => !string.IsNullOrWhiteSpace(str))
-                     .Where(word => word.Length > 1)
+                     .Where(word => word.Length > 1) // filter out single chars
                      .ToList();
             try
             {
@@ -234,7 +237,7 @@ namespace DSAEHonours
                         return GenerateQuotes(EditDistMatchWords(splitText, searchWordList), data, splitText);
 
                     default:
-                        throw new Exception("Invalid matching mode value. Please select {1,2,3,4}");
+                        throw new Exception("Invalid matching mode value. Please select {1, 2, 3, 4}");
                 }
 
             }
@@ -245,11 +248,11 @@ namespace DSAEHonours
             }
         }
         /// <summary>
-        /// 
+        /// Packages the article metadata, the found word and the context sentence into a Quote object 
         /// </summary>
         /// <param name="foundWords"></param>
         /// <param name="data"></param>
-        /// <returns></returns>
+        /// <returns>Returns a list of every found word and the corresponding object</returns>
         public static List<Quote> GenerateQuotes(List<string> foundWords, ScrappedData data, List<string> splitText)
         {
             try
@@ -260,7 +263,7 @@ namespace DSAEHonours
                                 data.PublishedDate, data.Author, data.Title, data.RSS_Source))
                                 .ToList();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("(GenerateQuotes) " + e.Message);
                 return null;
@@ -304,7 +307,7 @@ namespace DSAEHonours
                         begin = post;
                     }
                 }
-                QuoteSentences.Add(string.Join(' ', splitText.GetRange(begin, end - begin)));
+                QuoteSentences.Add(string.Join(" ", splitText.GetRange(begin, end - begin)));
             }
             return QuoteSentences.Distinct().ToList();
         }
@@ -316,14 +319,13 @@ namespace DSAEHonours
         /// <returns></returns>
         public static List<string> StringMatchWords(IEnumerable<string> splitText, SearchWordList searchList)
         {
-            var thing = searchList.GetAllWordForms()
-                        .Where(word => splitText.Contains(word))
-                        .OrderBy(t => t)
-                        .Where(item => item != null)
-                        .ToList();
+            return searchList.GetAllWordForms()
+                   .Where(word => splitText.Contains(word))
+                   .OrderBy(t => t)
+                   .Where(item => item != null)
+                   .ToList();
 
-            Console.WriteLine(thing.Count == 0 ? "No Search Words found" : string.Join('\n', thing));
-            return thing;
+            //Console.WriteLine(thing.Count == 0 ? "No Search Words found" : string.Join("\n", thing));
         }
         /// <summary>
         /// 
@@ -338,13 +340,13 @@ namespace DSAEHonours
                 { return Tuple.Create(sx.BuildKey(word), word); })
                 .OrderBy(tup => tup.Item1);
 
-            Console.WriteLine(string.Join('\n', SoundExWords.Select(tup => tup.Item1 + "\t" + tup.Item2)));
+            Console.WriteLine(string.Join("\n", SoundExWords.Select(tup => tup.Item1 + "\t" + tup.Item2)));
 
             var SoundExSearch = searchList.GetHeadWords().Select(word =>
                 { return Tuple.Create(sx.BuildKey(word), word); })
                 .OrderBy(tup => tup.Item1);
 
-            Console.WriteLine(string.Join('\n', SoundExSearch.Select(tup => tup.Item1 + "\t" + tup.Item2)));
+            Console.WriteLine(string.Join("\n", SoundExSearch.Select(tup => tup.Item1 + "\t" + tup.Item2)));
 
             var thing = SoundExWords.Where(word =>
                 SoundExSearch.Select(search =>
@@ -354,7 +356,7 @@ namespace DSAEHonours
                 .ToList();
 
             Console.WriteLine(thing.Count() == 0 ? "No Search Words found using SoundEx Matching"
-                : "Search Words found using SoundEx Matching: \n" + string.Join('\n', thing));
+                : "Search Words found using SoundEx Matching: \n" + string.Join("\n", thing));
             return thing;
 
         }
@@ -387,7 +389,7 @@ namespace DSAEHonours
                 .ToList();
 
             Console.WriteLine(thing.Count() == 0 ? "No Search Words found using Metaphone Matching"
-               : "Search Words found using Metaphone Matching: \n" + string.Join('\n', thing));
+               : "Search Words found using Metaphone Matching: \n" + string.Join("\n", thing));
             return thing;
         }
 
