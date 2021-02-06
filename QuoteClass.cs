@@ -20,6 +20,10 @@ namespace DSAEHonoursGUI
         /// </summary>
         private string SearchWord { get; }
         /// <summary>
+        /// Under which headword the flagged SearchWord is grouped under, could be the same as the Search word
+        /// </summary>
+        private string HeadWord { get; }
+        /// <summary>
         /// Date of published article from the meta data of the article
         /// </summary>
         private string PublishedDate { get; }
@@ -60,6 +64,8 @@ namespace DSAEHonoursGUI
 
         public static void OutputXML(string filePath, List<Quote> quotes)
         {
+            // change to generate a new xml file with the date as a file name
+            // Remember to check if the file for today already exists
             if (!File.Exists(filePath))
             { // load xml file
                 Console.WriteLine("File cannout be found at " + filePath);
@@ -76,12 +82,16 @@ namespace DSAEHonoursGUI
                 // Check how to open an XML file
 
                 quotes.Select(q =>
-                // for each quote object, convert to XML and append to the XML 
+                // for each quote object, convert to XML
                 {
                     writer.WriteStartElement("IntakeRec");
 
+                    writer.WriteStartElement("Catch Word");
+                    writer.WriteString(q.SearchWord);
+                    writer.WriteEndElement();
+
                     writer.WriteStartElement("QuotationYear");
-                    writer.WriteString("2020");
+                    writer.WriteString($"{DateTime.Today.Year}");
                     writer.WriteEndElement();
 
                     writer.WriteStartElement("PublicationDate");

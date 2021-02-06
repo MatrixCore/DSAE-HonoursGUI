@@ -133,6 +133,25 @@ namespace DSAEHonoursGUI
             return ListSearchWords.SelectMany(word => word.Headwords);
         }
         /// <summary>
+        /// Method to find the head word of a related word variation
+        /// If there are more than one head word, it returns the first in the list
+        /// </summary>
+        /// <param name="wordVar"></param>
+        /// <returns></returns>
+        public string HeadWordLookup(string wordVar)
+        {
+            bool isHeadWord = ListSearchWords.Select(list => list.Headwords.Contains(wordVar)).FirstOrDefault();
+            // Checks if the given word is already a head word
+            if (isHeadWord) { return wordVar; } // If it is, then return it
+            else
+            {   // Else it must be a word var, then look for canonical form
+                return ListSearchWords
+                   .Where(list => list.WordVars.Contains(wordVar))
+                   .Select(found => found.Headwords[0])
+                   .First();
+            }            
+        }
+        /// <summary>
         /// Subclass to model the DSAE's search list of desired words taken from a text file
         /// </summary>
         public class SearchWord
@@ -156,7 +175,7 @@ namespace DSAEHonoursGUI
             {
                 Headwords = headWord;
                 WordVars = wordVars;
-            }
+            }            
 
             public override string ToString()
             {

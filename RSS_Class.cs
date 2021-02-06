@@ -1,8 +1,8 @@
 ﻿using CodeHollow.FeedReader;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Linq;
 
 namespace DSAEHonoursGUI
 {
@@ -22,7 +22,10 @@ namespace DSAEHonoursGUI
         {
             ReadRSSFile(filepath);
         }
-
+        /// <summary>
+        /// Reads in the RSS text file and adds the urls to the RSS_Feeds list object
+        /// </summary>
+        /// <param name="filepath"></param>
         public void ReadRSSFile(string filepath)
         {
             if (!(File.Exists(filepath)))
@@ -57,10 +60,9 @@ namespace DSAEHonoursGUI
             }
         }
         /// <summary>
-        /// Opens SaRssFeed for reading and Async retrieves the list of stored news page URLs
+        /// Opens SA_RSS_Feeds for reading and async retrieves the list of stored news page URLs
         /// Returns the URL and the title of the RSS feed as a source to enable parsing 
         /// </summary>
-        /// <param name="DoArchive">Bool to decide if the XML RSS feeds should be saved locally</param>
         /// <returns>Collection of string URLs</returns>
         public IEnumerable<Tuple<string, string>> LoadRSS()
         {
@@ -77,8 +79,8 @@ namespace DSAEHonoursGUI
                     .Distinct()
                     .Select(item =>
                     {
-                    //Console.WriteLine($"Read {++count} from RSS Feed: {feed.Result.Title}");
-                    return Tuple.Create(item.Link, feed.Result.Title);
+                        //return (link: item.Link, title: feed.Result.Title); - would prefer to have the tuple values have names attached
+                        return Tuple.Create(item.Link, feed.Result.Title);
                     });
                 });
             }

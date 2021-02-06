@@ -1,7 +1,12 @@
 # Use hash to ignore a line
 http://feeds.news24.com/articles/news24/SouthAfrica/rss
-http://ewn.co.za/RSS%20Feeds/Latest%20News?category=Local
-https://www.businesslive.co.za/rss/?publication=bd&section=national
-http://rss.iol.io/iol/news/south-africa
-https://sowetanlive.co.za/rss/?publication=sowetan-live
-https://www.timeslive.co.za/rss/
+
+#http://ewn.co.za/RSS%20Feeds/Latest%20News?category=Local
+
+#http://rss.iol.io/iol/news/south-africa
+
+#https://sowetanlive.co.za/rss/?publication=sowetan-live
+
+#https://www.timeslive.co.za/rss/
+
+#https://www.businesslive.co.za/rss/?publication=bd&section=national

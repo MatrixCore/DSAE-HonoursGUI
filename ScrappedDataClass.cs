@@ -31,6 +31,8 @@ namespace DSAEHonoursGUI
         /// <summary>
         /// Date of web page publication
         /// </summary>
+        
+        // May be worth parsing the scrapped date data and changing it to a date time object
         public string PublishedDate { get; private set; }
         /// <summary>
         /// Text taken from the body of the news article
@@ -54,25 +56,55 @@ namespace DSAEHonoursGUI
             ArticleText = text;
             RSS_Source = rss;
         }
-
+        /// <summary>
+        /// Method to add only a single found quote object
+        /// </summary>
+        /// <param name="single"></param>
         public void AddQuotes(Quote single)
         {
             FoundQuotes.Add(single);
         }
-
+        /// <summary>
+        /// Method to add multiple found quote objects
+        /// </summary>
+        /// <param name="quotes"></param>
         public void AddQuotes(List<Quote> quotes)
         {
             FoundQuotes.AddRange(quotes);
         }
-
-        public void SetPublishedDate(string date)
+        /// <summary>
+        /// Method to add or change the publication date of an article in a ScrappedData object
+        /// </summary>
+        /// <param name="date"></param>
+        public void SetPublishedDate(string date, string source)
         {
-            PublishedDate = date;
+            if (source == null)
+            {
+                PublishedDate = "unknown";
+            }
+            // maybe use a switch statement instead
+            else if(source.Contains("News24") || source.Contains("IOL"))
+            {
+                PublishedDate = date.Substring(0, 10);
+                // Format: 2021-02-06T07:06:40.487Z
+                // Grab everything from the start and until the T exclusive
+            } 
+            else if (source.Contains("Eyewitness"))
+            {
+                PublishedDate = date;
+                // format: yyyy-mm-dd
+            }
+            else if (source.Contains("BusinessLive") || source.Contains("TimesLive") || source.Contains("SowetanLIVE"))
+            {
+                PublishedDate = date.Substring(0, date.IndexOf('-') - 1);
+                // format: 06 February 2021 - 09:07
+                // Maybe convert to dateTime to get dd/mm/yyyy
+            }
         }
         /// <summary>
-        /// Need I say more?
+        /// Overridden to string method
         /// </summary>
-        /// <returns>Wanna guess?</returns>
+        /// <returns>Prints each field on a new line</returns>
         public override string ToString()
         {
             return $"URL: {URL},\n Title: {Title}\nAuthor: {Author}\nDescription: {Descript},\nPublished Date: {PublishedDate}\n";

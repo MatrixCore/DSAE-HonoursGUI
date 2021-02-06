@@ -31,11 +31,12 @@ namespace DSAEHonoursGUI
         {
             // Poential change: Don't save the whole document, rather use getTextNodes() to grab the article body and drop the request of the HTML document as nothing else is being used 
             // Still archive the HTML document but only keep the article body in memory
-            return URLs.AsParallel().Select(address =>
+            return URLs.Select(address =>
             {
                 try
                 {
                     bool doProcess = true;
+                    bool testLogURL = false;
                     var web = new HtmlWeb();
                     var html = web.Load(address.Item1);
                     if (web.StatusCode != HttpStatusCode.OK) { throw new Exception($"Web status (processUrls): {web.StatusCode}"); }
@@ -43,28 +44,32 @@ namespace DSAEHonoursGUI
                     // Gets last HTTP status code and throws exception if not == OK (200)
                     var text = GetTextNode(html, address.Item2);
 
-                    if (!File.Exists(Directory.GetCurrentDirectory() + @"\files\URLtable.txt"))
+                    if (testLogURL)
                     {
-                        File.Create(Directory.GetCurrentDirectory() + @"\files\URLtable.txt");
-                    }
-                    else
-                    {
-                        doProcess = !File.ReadAllLines(Directory.GetCurrentDirectory() + @"\files\URLtable.txt")
-                        .ToList().Contains(address.Item1);
-                        // Used to control further processing, if the url is already recorded then do not process further 
-                    }
+                        if (!File.Exists(Directory.GetCurrentDirectory() + @"\files\URLtable.txt"))
+                        {
+                            File.Create(Directory.GetCurrentDirectory() + @"\files\URLtable.txt");
+                        }
+                        else
+                        {
+                            doProcess = !File.ReadAllLines(Directory.GetCurrentDirectory() + @"\files\URLtable.txt")
+                            .ToList().Contains(address.Item1);
+                            // Used to control further processing, if the url is already recorded then do not process further 
+                        }
 
-                    if (doProcess)
-                    {
-                        TextWriter writer = new StreamWriter(Directory.GetCurrentDirectory() + @"\files\URLtable.csv", true);
-                        writer.WriteLine($"{address.Item1}, {DateTime.Today.ToString("d")}");
-
-                        return new { Doc = html, Url = address, body = text };
+                        if (doProcess)
+                        {
+                            TextWriter writer = new StreamWriter(Directory.GetCurrentDirectory() + @"\files\URLtable.csv", true);
+                            writer.WriteLine($"{address.Item1}, {DateTime.Today.ToString("d")}");
+                            writer.Close();
+                            return new { Doc = html, Url = address, body = text };
+                        }
+                        else
+                        {
+                            return null;
+                        }
                     }
-                    else
-                    {
-                        return null;
-                    }                    
+                    return new { Doc = html, Url = address, body = text };
                 }
                 catch (Exception e)
                 {
@@ -74,18 +79,18 @@ namespace DSAEHonoursGUI
             })
             .Select(data =>
              { // Search through the head tag to find meta data
-                if (data == null) { return null; }
-                return GetPublishedDate(data.Doc, data.Url.Item2, new ScrappedData( 
-                    // Publication date tags vary from outlet to outlet so once the common data 
-                    // has been extracted, the html page is passed to a method to record the published 
-                    title: data?.Doc?.DocumentNode?.SelectSingleNode("//head/title")?.InnerText,
-                    author: data?.Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='author']")?.Attributes["content"]?.Value,
-                    description: data?.Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='description']")?.Attributes["content"]?.Value,
-                    text: data?.body,
-                    url: data?.Url.Item1,
-                    rss: data?.Url.Item2
-                    ));
-            });
+                 if (data == null) { return null; }
+                 return GetPublishedDate(data.Doc, data.Url.Item2, new ScrappedData(
+                     // Publication date tags vary from outlet to outlet so once the common data 
+                     // has been extracted, the html page is passed to a method to record the published 
+                     title: data?.Doc?.DocumentNode?.SelectSingleNode("//head/title")?.InnerText,
+                     author: data?.Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='author']")?.Attributes["content"]?.Value,
+                     description: data?.Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='description']")?.Attributes["content"]?.Value,
+                     text: data?.body,
+                     url: data?.Url.Item1,
+                     rss: data?.Url.Item2
+                     ));
+             });
         }
 
         /// <summary>
@@ -100,32 +105,31 @@ namespace DSAEHonoursGUI
             {
                 if (source.Contains("News24"))
                 {
-                    page.SetPublishedDate(Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='publisheddate']")?.Attributes["content"]?.Value);
+                    page.SetPublishedDate(Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='publisheddate']")?.Attributes["content"]?.Value, source);
                 }
                 else if (source.Contains("Eyewitness News") || source.Contains("IOL"))
                 {
-                    page.SetPublishedDate(Doc?.DocumentNode?.SelectSingleNode("//meta[@itemprop = 'datePublished']")?.Attributes["content"]?.Value);
+                    page.SetPublishedDate(Doc?.DocumentNode?.SelectSingleNode("//meta[@itemprop = 'datePublished']")?.Attributes["content"]?.Value, source);
                 }
                 else if (source.Contains("BusinessLIVE") || source.Contains("TimesLIVE"))
                 {
-                    page.SetPublishedDate(Doc.DocumentNode.SelectSingleNode("//div[@class = 'article-pub-date ']").Attributes["content"].Value); // Not working for either
+                    page.SetPublishedDate(Doc.DocumentNode.SelectSingleNode("//div[@class = 'article-pub-date ']").Attributes["content"].Value, source); // Not working for either
                 }
                 else if (source.Contains("SowetanLIVE"))
                 {
-                    page.SetPublishedDate(Doc.DocumentNode.SelectSingleNode("//span[@class = 'article-pub-date']").Attributes["content"].Value); // Not working
+                    page.SetPublishedDate(Doc.DocumentNode.SelectSingleNode("//span[@class = 'article-pub-date']").Attributes["content"].Value, source); // Not working
                 }
                 else
                 {
-                    page.SetPublishedDate("Unknown");
+                    page.SetPublishedDate("Unknown", null);
                 }
-
                 return page;
 
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                page.SetPublishedDate("Unknown");
+                page.SetPublishedDate("Unknown", null);
                 return page;
             }
         }
@@ -152,10 +156,28 @@ namespace DSAEHonoursGUI
                 else
                 if (RSSsource.Contains("News24"))
                 {
-                    return doc.DocumentNode.SelectSingleNode("//div[@class = 'article__body']").InnerText;
+                    // Regular article 
+                    if (doc.DocumentNode.SelectSingleNode("//div[@class = 'article__body']").InnerText != null) 
+                        // Checks to see if the above code returns a string
+                    {
+                        return doc.DocumentNode.SelectSingleNode("//div[@class = 'article__body']").InnerText;
+                    }
+                    else // Otherwise the article is paywalled 
+                    {
+                        return doc.DocumentNode.SelectSingleNode("//div[@class = 'article__body--locked']").InnerText;
+                        // If the article is locked behind a paywall, then a different div attritubte is used
+                    }                    
                 }
                 else
-                if (RSSsource.Contains("BusinessLIVE") || RSSsource.Contains("TimesLIVE") || RSSsource.Contains("SowetanLIVE"))
+                if (RSSsource.Contains("BusinessLIVE"))
+                {
+                    return doc.DocumentNode.SelectSingleNode("//div[@class = 'wrap']/div[@class = 'text']").InnerText;
+                }
+                if (RSSsource.Contains("TimesLive"))
+                {
+                    return doc.DocumentNode.SelectSingleNode("//div[@class = 'wrap']/div[@class = 'text']").InnerText;
+                }
+                if (RSSsource.Contains("SowetanLIVE"))
                 {
                     return doc.DocumentNode.SelectSingleNode("//div[@class = 'wrap']/div[@class = 'text']").InnerText;
                 }
@@ -184,6 +206,7 @@ namespace DSAEHonoursGUI
             // Use Regex as you have more control
             // Something like: {letter}?{letter} is replaced with {letter}?{whitespace}{letter}
             // OR HTML Ampersand Character Codes like &quot
+            // also escaped double quote marks
             string originalText = Splittext;
             try
             {
@@ -213,10 +236,11 @@ namespace DSAEHonoursGUI
         /// </summary>
         public static List<Quote> FindSearchWords(ScrappedData data, SearchWordList searchWordList, int mode)
         {
-            var splitText = SanitizeText(data.ArticleText)
+            var splitText = //SanitizeText(data.ArticleText)
+                      data.ArticleText
                      .Split(' ')
-                     .Where(str => !string.IsNullOrWhiteSpace(str))
-                     .Where(word => word.Length > 1) // filter out single chars
+                     .Where(str => !string.IsNullOrWhiteSpace(str)) 
+                     .Where(str => str.Length > 1) // filter out single chars
                      .ToList();
             try
             {
@@ -225,16 +249,16 @@ namespace DSAEHonoursGUI
                 switch (mode)
                 {
                     case 0:
-                        return GenerateQuotes(StringMatchWords(splitText, searchWordList), data, splitText);
+                        return GenerateQuotes(StringMatchWords(splitText, searchWordList), data, splitText, searchWordList);
 
                     case 1:
-                        return GenerateQuotes(SoundExMatchWords(splitText, searchWordList), data, splitText);
+                        return GenerateQuotes(SoundExMatchWords(splitText, searchWordList), data, splitText, searchWordList);
 
                     case 2:
-                        return GenerateQuotes(MetaphoneMatchWords(splitText, searchWordList), data, splitText);
+                        return GenerateQuotes(MetaphoneMatchWords(splitText, searchWordList), data, splitText, searchWordList);
 
                     case 3:
-                        return GenerateQuotes(EditDistMatchWords(splitText, searchWordList), data, splitText);
+                        return GenerateQuotes(EditDistMatchWords(splitText, searchWordList), data, splitText, searchWordList);
 
                     default:
                         throw new Exception("Invalid matching mode value. Please select {1, 2, 3, 4}");
@@ -248,20 +272,23 @@ namespace DSAEHonoursGUI
             }
         }
         /// <summary>
-        /// Packages the article metadata, the found word and the context sentence into a Quote object 
+        /// Packages the article metadata, found words and the context sentence into a Quote object 
         /// </summary>
         /// <param name="foundWords"></param>
         /// <param name="data"></param>
         /// <returns>Returns a list of every found word and the corresponding object</returns>
-        public static List<Quote> GenerateQuotes(List<string> foundWords, ScrappedData data, List<string> splitText)
+        public static List<Quote> GenerateQuotes(List<string> foundWords, ScrappedData data, List<string> splitText, SearchWordList SearchList)
         {
             try
             {
-                return foundWords.Select(word =>
-                                new Quote(word,
-                                FindQuoteSentences(splitText, word),
-                                data.PublishedDate, data.Author, data.Title, data.RSS_Source))
-                                .ToList();
+                return foundWords.Distinct().Select(word =>
+                                          new Quote(word,
+                                          FindQuoteSentences(splitText, word),
+                                          data.PublishedDate, 
+                                          data.Author, 
+                                          data.Title, 
+                                          data.RSS_Source))
+                                          .ToList();
             }
             catch (Exception e)
             {
@@ -271,7 +298,7 @@ namespace DSAEHonoursGUI
         }
 
         /// <summary>
-        /// Method to return the sentence the search word was found in by looking forwards and backwards for fullstops
+        /// Method to return multiple sentences the search word was found in by looking forwards and backwards for punctuation
         /// </summary>
         /// <param name="text"></param>
         /// <param name="pos"></param>
@@ -296,6 +323,7 @@ namespace DSAEHonoursGUI
                     // Decrements from the found word to find the end of sentence before the context sentence
                     {
                         begin = pre + 1;
+                        break;
                     }
                 }
 
@@ -304,7 +332,8 @@ namespace DSAEHonoursGUI
                     if (splitText[post].Contains('.') || splitText[post].Contains('!') || splitText[post].Contains('?'))
                     // Increments from the found word to locate the end of sentence
                     {
-                        begin = post;
+                        end = post;
+                        break;
                     }
                 }
                 QuoteSentences.Add(string.Join(" ", splitText.GetRange(begin, end - begin)));
@@ -312,18 +341,28 @@ namespace DSAEHonoursGUI
             return QuoteSentences.Distinct().ToList();
         }
         /// <summary>
-        /// 
+        /// Uses simple string matching to find words using the search list
         /// </summary>
         /// <param name="textWords"></param>
         /// <param name="searchList"></param>
         /// <returns></returns>
         public static List<string> StringMatchWords(IEnumerable<string> splitText, SearchWordList searchList)
         {
-            return searchList.GetAllWordForms()
-                   .Where(word => splitText.Contains(word))
-                   .OrderBy(t => t)
-                   .Where(item => item != null)
-                   .ToList();
+            //return searchList.GetAllWordForms()
+            //       .Where(word => splitText.Contains(word))
+            //       .ToList();
+            var final = new List<string>();
+            foreach (string form in searchList.GetAllWordForms())
+            {
+                foreach(string word in splitText)
+                {
+                    if (form == word)
+                    {
+                        final.Add(word);
+                    }
+                }
+            }
+            return final;
 
             //Console.WriteLine(thing.Count == 0 ? "No Search Words found" : string.Join("\n", thing));
         }
