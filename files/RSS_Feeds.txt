@@ -1,7 +1,7 @@
 # Use hash to ignore a line
-#http://feeds.news24.com/articles/news24/SouthAfrica/rss
+http://feeds.news24.com/articles/news24/SouthAfrica/rss
 
-http://ewn.co.za/RSS%20Feeds/Latest%20News?category=Local
+#http://ewn.co.za/RSS%20Feeds/Latest%20News?category=Local
 
 #http://rss.iol.io/iol/news/south-africa
 

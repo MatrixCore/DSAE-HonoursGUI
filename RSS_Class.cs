@@ -12,10 +12,6 @@ namespace DSAEHonoursGUI
         /// List of SA specific feeds from various news sites
         /// </summary>
         private List<string> SA_RSS_Feeds { get; set; }
-        /// <summary>
-        /// Number of RSS Feed links current in the list
-        /// </summary>
-        private int NumFeeds { get; set; }
 
 
         public RSS_Class(string filepath)
@@ -97,7 +93,7 @@ namespace DSAEHonoursGUI
         /// <returns></returns>
         public int GetNumRSSfeeds()
         {
-            return NumFeeds;
+            return SA_RSS_Feeds.Count();
         }
     }
 }

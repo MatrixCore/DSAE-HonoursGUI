@@ -238,7 +238,7 @@ namespace DSAEHonoursGUI
         {
             var splitText = //SanitizeText(data.ArticleText)
                       data.ArticleText
-                     .Split(' ')
+                     .Split(' ') // Splits the entire body of text into ind
                      .Where(str => !string.IsNullOrWhiteSpace(str))
                      .Where(str => str.Length > 1) // filter out single chars
                      .ToList();
@@ -357,7 +357,7 @@ namespace DSAEHonoursGUI
             {
                 foreach (string word in splitText)
                 {
-                    if (form == word)
+                    if (form.ToLower() == word.ToLower())
                     {
                         final.Add(word);
                     }

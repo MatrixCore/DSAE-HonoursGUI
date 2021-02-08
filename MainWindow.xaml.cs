@@ -35,6 +35,12 @@ namespace DSAE_HonoursGUI
             {
                 var RSSFeeds = new RSS_Class(Directory.GetCurrentDirectory() + @"\files\RSS_Feeds.txt");
 
+                if (RSSFeeds.GetNumRSSfeeds() == 0)
+                {
+                    ReportBox.Text = @"Zero RSS feeds found, please check that there are URls in \files\RSS_Feeds.txt";
+                    throw new Exception("No RSS feeds found");
+                }
+
                 ReportBox.Text += "RSS file loaded succesfully";
                 ReportBox.Text += $"\n {RSSFeeds.GetNumRSSfeeds()} RSS feeds taken from RSS file";
 
@@ -42,7 +48,7 @@ namespace DSAE_HonoursGUI
                               .Where(feed => feed != null)
                               .ToList();
 
-                //var testurl = new List<Tuple<string, string>>() { urlList.First() };
+                var testurl = new List<Tuple<string, string>>() { urlList.First() };
 
                 ReportBox.Text += $"\n {urlList.Count} URLs loaded from RSS feeds";
 
@@ -53,7 +59,7 @@ namespace DSAE_HonoursGUI
                     ReportBox.Text += $"\n {Searchlist.CountofWords()} head words and word variants found in Search List text file";
                     int numScrapped = 0;
                     var ScrappedList =
-                        HTMLScraper.ProcessUrls(urlList).ToList()
+                        HTMLScraper.ProcessUrls(testurl).ToList()
                         .Where(item =>
                         {
                             ReportBox.Text += $"\n {++numScrapped} URLs out of {urlList.Count} scrapped succesfully";

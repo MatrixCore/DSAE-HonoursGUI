@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Ignore the search list text file
+dsae-dictionary-search-list-2020-A-Z.utf8.txt
+
 # User-specific files
 *.rsuser
 *.suo
