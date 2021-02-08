@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Xml;
 
 namespace DSAEHonoursGUI
@@ -20,10 +18,6 @@ namespace DSAEHonoursGUI
         /// </summary>
         private string SearchWord { get; }
         /// <summary>
-        /// Under which headword the flagged SearchWord is grouped under, could be the same as the Search word
-        /// </summary>
-        private string HeadWord { get; }
-        /// <summary>
         /// Date of published article from the meta data of the article
         /// </summary>
         private string PublishedDate { get; }
@@ -35,7 +29,14 @@ namespace DSAEHonoursGUI
         /// Title of the news article
         /// </summary>
         private string SourceTitle { get; }
-        private string SourceType { get; }
+        /// <summary>
+        /// From which RSS feed this article was found
+        /// </summary>
+        private string RSSsource { get; }
+        /// <summary>
+        /// Link to the original article from where quote orignates
+        /// </summary>
+        private string URLsource { get; }
         /// <summary>
         /// 
         /// </summary>
@@ -46,19 +47,20 @@ namespace DSAEHonoursGUI
         /// <param name="title"></param>
         /// <param name="type"></param>
 
-        public Quote(string search, List<string> cs, string date, string author, string title, string type)
+        public Quote(string search, List<string> cs, string date, string author, string title, string rss, string url)
         {
             SearchWord = search;
             ContextSentences = cs;
             PublishedDate = date;
             AuthorName = author;
             SourceTitle = title;
-            SourceType = type;
+            RSSsource = rss;
+            URLsource = url;
         }
         override public string ToString()
         {
             return $"{SearchWord}: {string.Join("\n", ContextSentences) } " +
-                $"\n{AuthorName}, {SourceTitle}, {SourceType}" +
+                $"\n{AuthorName}, {SourceTitle}, {RSSsource}" +
                 $"{PublishedDate}";
         }
 
@@ -66,72 +68,91 @@ namespace DSAEHonoursGUI
         {
             // change to generate a new xml file with the date as a file name
             // Remember to check if the file for today already exists
-            if (!File.Exists(filePath))
-            { // load xml file
-                Console.WriteLine("File cannout be found at " + filePath);
-            }
-            else
+
+            XmlWriterSettings settings = new XmlWriterSettings
             {
-                XmlWriterSettings settings = new XmlWriterSettings
-                {
-                    Indent = true
-                };
+                Indent = true
+            };
 
-                XmlWriter writer = XmlWriter.Create(filePath + "DSAEoutput.xml", settings);
-                writer.WriteStartDocument();
-                // Check how to open an XML file
+            XmlWriter writer = XmlWriter.Create(filePath, settings);
+            writer.WriteStartDocument();
 
-                quotes.Select(q =>
-                // for each quote object, convert to XML
-                {
-                    writer.WriteStartElement("IntakeRec");
+            writer.WriteStartElement("IntakeRec");
+            //Top level tag
+            foreach (Quote q in quotes)
+            // for each quote object, convert to XML
+            {
+                writer.WriteStartElement("Quote");
 
-                    writer.WriteStartElement("Catch Word");
-                    writer.WriteString(q.SearchWord);
-                    writer.WriteEndElement();
+                writer.WriteStartElement("BibloInfo");
 
-                    writer.WriteStartElement("QuotationYear");
-                    writer.WriteString($"{DateTime.Today.Year}");
-                    writer.WriteEndElement();
-
-                    writer.WriteStartElement("PublicationDate");
-                    writer.WriteString(q.PublishedDate);
-                    writer.WriteEndElement();
-
-                    writer.WriteStartElement("AuthorInfo");
-                    writer.WriteString(q.AuthorName);
-                    writer.WriteEndElement();
-
-                    writer.WriteStartElement("PrintSource");
-                    writer.WriteString(q.SourceTitle);
-                    writer.WriteEndElement();
-
-                    writer.WriteStartElement("ElectronicSource");
-                    writer.WriteString("SA Online Newspaper");
-                    writer.WriteEndElement();
-
-                    writer.WriteStartElement("LexicalInfo");
-                    // Add in a loop to print every excerpt per quote article
-                    q.ContextSentences.ForEach(sentence =>
-                        {
-                            writer.WriteStartElement("Excerpt");
-                            writer.WriteString(sentence);
-                            writer.WriteEndElement();
-                        });
-                    writer.WriteEndElement();
-
-                    writer.WriteStartElement("FinalReviewComment");
-                    writer.WriteString(" ");
-                    writer.WriteEndElement();
-                    return 0;
-                });
+                writer.WriteStartElement("QuotationYear");
+                writer.WriteString($"{DateTime.Today.Year}");
                 writer.WriteEndElement();
-                // closes the IntakeRec tag
-                writer.WriteEndDocument();
-                writer.Flush();
-                writer.Close();
-            }
+                //closes QuotationYear
+
+                writer.WriteStartElement("PublicationDate");
+                writer.WriteString(q.PublishedDate == null ? "Unknown" : q.PublishedDate);
+                writer.WriteEndElement();
+                //closes PublicationDate
+
+                writer.WriteStartElement("AuthorInfo");
+                writer.WriteString(q.AuthorName == null ? "Unknown" : q.AuthorName);
+                writer.WriteEndElement();
+                //closes AuthorInfo
+
+                writer.WriteStartElement("PrintSource");
+                writer.WriteString(q.SourceTitle == null ? "Unknown" : q.SourceTitle);
+                writer.WriteEndElement();
+                //closes PrintSource
+
+                writer.WriteStartElement("ElectronicSource");
+                writer.WriteString(q.RSSsource);
+                writer.WriteEndElement();
+                //closes ElectronicSource
+
+                writer.WriteStartElement("URLsource");
+                // Doesn't conform to schema, may need to be removed
+                writer.WriteString(q.URLsource);
+                writer.WriteEndElement();
+                //closes URLsource
+
+                writer.WriteEndElement();
+                //closes BibloInfo              
+
+                writer.WriteStartElement("LexicalInfo");
+
+                writer.WriteStartElement("CatchWord");
+                writer.WriteString(q.SearchWord);
+                writer.WriteEndElement();
+                //closes CatchWord    
+
+                foreach (string context in q.ContextSentences)
+                {
+                    writer.WriteStartElement("Excerpt");
+                    writer.WriteString(context);
+                    writer.WriteEndElement();
+                    //closes Excerpt
+                };
+                writer.WriteEndElement();
+                //closes LexicalInfo
+
+                writer.WriteStartElement("FinalReviewComment");
+                // Not if this is needed
+                writer.WriteString(" ");
+                writer.WriteEndElement();
+                //closes FinalReviewComment
+
+                writer.WriteEndElement();
+                //closes Quote
+            };
+            writer.WriteEndElement();
+            //closes top level tag
+            writer.WriteEndDocument();
+            writer.Flush();
+            writer.Close();
         }
+
     }
 
 }

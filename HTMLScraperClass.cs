@@ -42,7 +42,7 @@ namespace DSAEHonoursGUI
                     if (web.StatusCode != HttpStatusCode.OK) { throw new Exception($"Web status (processUrls): {web.StatusCode}"); }
                     // Check for 302 or 500 code
                     // Gets last HTTP status code and throws exception if not == OK (200)
-                    var text = GetTextNode(html, address.Item2);
+                    var text = GetTextNode(html, address.Item2.Trim());
 
                     if (testLogURL)
                     {
@@ -80,16 +80,17 @@ namespace DSAEHonoursGUI
             .Select(data =>
              { // Search through the head tag to find meta data
                  if (data == null) { return null; }
-                 return GetPublishedDate(data.Doc, data.Url.Item2, new ScrappedData(
+                 return new ScrappedData(
                      // Publication date tags vary from outlet to outlet so once the common data 
                      // has been extracted, the html page is passed to a method to record the published 
                      title: data?.Doc?.DocumentNode?.SelectSingleNode("//head/title")?.InnerText,
                      author: data?.Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='author']")?.Attributes["content"]?.Value,
                      description: data?.Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='description']")?.Attributes["content"]?.Value,
+                     date: GetPublishedDate(data?.Doc, data?.Url.Item2.Trim()),
                      text: data?.body,
                      url: data?.Url.Item1,
                      rss: data?.Url.Item2
-                     ));
+                     );
              });
         }
 
@@ -98,39 +99,41 @@ namespace DSAEHonoursGUI
         /// </summary>
         /// <param name="incomplete"></param>
         /// <param name="doc"></param>
-        /// <returns>Returns an updated ScrappedData object with the published date field filled</returns>
-        private static ScrappedData GetPublishedDate(HtmlDocument Doc, string source, ScrappedData page)
+        /// <returns>Returns a the string of the publication date</returns>
+        public static string GetPublishedDate(HtmlDocument Doc, string source)
         {
             try
             {
                 if (source.Contains("News24"))
                 {
-                    page.SetPublishedDate(Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='publisheddate']")?.Attributes["content"]?.Value, source);
+                    return ScrappedData.formatPublishedDate(
+                        Doc?.DocumentNode?.SelectSingleNode("//head/meta[@name='publisheddate']")?.Attributes["content"]?.Value, source);
                 }
                 else if (source.Contains("Eyewitness News") || source.Contains("IOL"))
                 {
-                    page.SetPublishedDate(Doc?.DocumentNode?.SelectSingleNode("//meta[@itemprop = 'datePublished']")?.Attributes["content"]?.Value, source);
+                    return ScrappedData.formatPublishedDate(
+                        Doc?.DocumentNode?.SelectSingleNode("//meta[@itemprop = 'datePublished']")?.Attributes["content"]?.Value, source);
                 }
                 else if (source.Contains("BusinessLIVE") || source.Contains("TimesLIVE"))
                 {
-                    page.SetPublishedDate(Doc.DocumentNode.SelectSingleNode("//div[@class = 'article-pub-date ']").Attributes["content"].Value, source); // Not working for either
+                    return ScrappedData.formatPublishedDate(
+                            Doc.DocumentNode.SelectSingleNode("//div[@class = 'article-pub-date ']").Attributes["content"].Value, source); // Not working for either
                 }
                 else if (source.Contains("SowetanLIVE"))
                 {
-                    page.SetPublishedDate(Doc.DocumentNode.SelectSingleNode("//span[@class = 'article-pub-date']").Attributes["content"].Value, source); // Not working
+                    return ScrappedData.formatPublishedDate(
+                            Doc.DocumentNode.SelectSingleNode("//span[@class = 'article-pub-date']").Attributes["content"].Value, source); // Not working
                 }
                 else
                 {
-                    page.SetPublishedDate("Unknown", null);
+                    return "Unknown";
                 }
-                return page;
 
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
-                page.SetPublishedDate("Unknown", null);
-                return page;
+                Console.WriteLine("Article publish date not found");
+                return "Unknown";
             }
         }
 
@@ -153,12 +156,11 @@ namespace DSAEHonoursGUI
                 {
                     return doc.DocumentNode.SelectSingleNode("//span[@itemprop = 'articleBody']").InnerText;
                 }
-                else
-                if (RSSsource.Contains("News24"))
+                else if (RSSsource.Contains("News24"))
                 {
                     // Regular article 
-                    if (doc.DocumentNode.SelectSingleNode("//div[@class = 'article__body']").InnerText != null) 
-                        // Checks to see if the above code returns a string
+                    if (doc.DocumentNode.SelectSingleNode("//div[@class = 'article__body']").InnerText != null)
+                    // Checks to see if the above code returns a string
                     {
                         return doc.DocumentNode.SelectSingleNode("//div[@class = 'article__body']").InnerText;
                     }
@@ -166,23 +168,21 @@ namespace DSAEHonoursGUI
                     {
                         return doc.DocumentNode.SelectSingleNode("//div[@class = 'article__body--locked']").InnerText;
                         // If the article is locked behind a paywall, then a different div attritubte is used
-                    }                    
+                    }
                 }
-                else
-                if (RSSsource.Contains("BusinessLIVE"))
+                else if (RSSsource.Contains("BusinessLIVE"))
                 {
                     return doc.DocumentNode.SelectSingleNode("//div[@class = 'wrap']/div[@class = 'text']").InnerText;
                 }
-                if (RSSsource.Contains("TimesLive"))
+                else if (RSSsource.Contains("TimesLIVE"))
                 {
                     return doc.DocumentNode.SelectSingleNode("//div[@class = 'wrap']/div[@class = 'text']").InnerText;
                 }
-                if (RSSsource.Contains("SowetanLIVE"))
+                else if (RSSsource.Contains("SowetanLIVE"))
                 {
                     return doc.DocumentNode.SelectSingleNode("//div[@class = 'wrap']/div[@class = 'text']").InnerText;
                 }
-                else
-                if (RSSsource.Contains("IOL"))
+                else if (RSSsource.Contains("IOL"))
                 {
                     return doc.DocumentNode.SelectSingleNode("//div[@itemprop = 'articleBody']").InnerText;
                 }
@@ -239,7 +239,7 @@ namespace DSAEHonoursGUI
             var splitText = //SanitizeText(data.ArticleText)
                       data.ArticleText
                      .Split(' ')
-                     .Where(str => !string.IsNullOrWhiteSpace(str)) 
+                     .Where(str => !string.IsNullOrWhiteSpace(str))
                      .Where(str => str.Length > 1) // filter out single chars
                      .ToList();
             try
@@ -284,10 +284,11 @@ namespace DSAEHonoursGUI
                 return foundWords.Distinct().Select(word =>
                                           new Quote(word,
                                           FindQuoteSentences(splitText, word),
-                                          data.PublishedDate, 
-                                          data.Author, 
-                                          data.Title, 
-                                          data.RSS_Source))
+                                          data.PublishedDate,
+                                          data.Author,
+                                          data.Title,
+                                          data.RSS_Source,
+                                          data.URL))
                                           .ToList();
             }
             catch (Exception e)
@@ -354,7 +355,7 @@ namespace DSAEHonoursGUI
             var final = new List<string>();
             foreach (string form in searchList.GetAllWordForms())
             {
-                foreach(string word in splitText)
+                foreach (string word in splitText)
                 {
                     if (form == word)
                     {

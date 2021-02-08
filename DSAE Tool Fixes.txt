@@ -1,0 +1,7 @@
+1. Fix url logging
+2. IOL author returns null
+3. LIVE publication dates are in the wrong format 
+4. LIVE publication dates not being found by XPATH
+5. LIVE can't find author name
+5. Check if Directory.GetCurrentDirectory() works on laptop
+6. Fix finding search words with multiple words in them

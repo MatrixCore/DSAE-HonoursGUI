@@ -47,11 +47,12 @@ namespace DSAEHonoursGUI
         /// </summary>
         /// <param name="temp"></param>
 
-        public ScrappedData(string title, string url, string rss, string author, string description, string text)
+        public ScrappedData(string title, string url, string rss, string author, string date, string description, string text)
         {
             Title = title;
             URL = url;
             Author = author;
+            PublishedDate = date;
             Descript = description;
             ArticleText = text;
             RSS_Source = rss;
@@ -76,29 +77,29 @@ namespace DSAEHonoursGUI
         /// Method to add or change the publication date of an article in a ScrappedData object
         /// </summary>
         /// <param name="date"></param>
-        public void SetPublishedDate(string date, string source)
+        public static string formatPublishedDate(string date, string source)
         {
-            if (source == null)
-            {
-                PublishedDate = "unknown";
-            }
             // maybe use a switch statement instead
-            else if(source.Contains("News24") || source.Contains("IOL"))
+            if(source.Contains("News24") || source.Contains("IOL"))
             {
-                PublishedDate = date.Substring(0, 10);
+                return date.Substring(0, 10);
                 // Format: 2021-02-06T07:06:40.487Z
                 // Grab everything from the start and until the T exclusive
             } 
             else if (source.Contains("Eyewitness"))
             {
-                PublishedDate = date;
+                return date;
                 // format: yyyy-mm-dd
             }
             else if (source.Contains("BusinessLive") || source.Contains("TimesLive") || source.Contains("SowetanLIVE"))
             {
-                PublishedDate = date.Substring(0, date.IndexOf('-') - 1);
+                return date.Substring(0, date.IndexOf('-') - 1);
                 // format: 06 February 2021 - 09:07
                 // Maybe convert to dateTime to get dd/mm/yyyy
+            }
+            else
+            {
+                return "unknown";
             }
         }
         /// <summary>

@@ -19,6 +19,17 @@ namespace DSAE_HonoursGUI
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+            BeginScrapping();
+        }
+
+
+        private void StopScrap_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void BeginScrapping()
+        {
             // Begin scrapping 
             try
             {
@@ -31,8 +42,7 @@ namespace DSAE_HonoursGUI
                               .Where(feed => feed != null)
                               .ToList();
 
-                var testurl = new List<Tuple<string, string>>() {  };
-                testurl.Add(Tuple.Create(urlList.First().Item1, urlList.First().Item2));
+                var testurl = new List<Tuple<string, string>>() { urlList.First() };
 
                 ReportBox.Text += $"\n {urlList.Count} URLs loaded from RSS feeds";
 
@@ -59,8 +69,7 @@ namespace DSAE_HonoursGUI
                         })
                             .ToList();
 
-                    var testName = $@"\files\Output\{DateTime.Today.Date}.xml";
-                    Quote.OutputXML(Directory.GetCurrentDirectory() + $@"\files\Output\{DateTime.Today}.xml", quoteList);
+                    Quote.OutputXML(Directory.GetCurrentDirectory() + $@"\files\Output\test.xml", quoteList);
 
                     ReportBox.Text += "\n Extracted quotes successfully written to \\files\\Output\\";
                     ReportBox.Text += $"\n Total number of generated quotes: {quoteList.Count()}";
@@ -70,14 +79,8 @@ namespace DSAE_HonoursGUI
             }
             catch (Exception exp)
             {
-                ReportBox.Text += $"Scrapping has failed with this message:{exp}";
+                ReportBox.Text += $"\n Scrapping has failed with this message:{exp}";
             }
-        }
-
-
-        private void StopScrap_Click(object sender, RoutedEventArgs e)
-        {
-
         }
     }
 }
