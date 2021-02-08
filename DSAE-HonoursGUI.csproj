@@ -117,8 +117,5 @@
   <ItemGroup>
     <None Include="files\RSS_Feeds.txt" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="files\HTMLpages\HTMLtable.txt" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

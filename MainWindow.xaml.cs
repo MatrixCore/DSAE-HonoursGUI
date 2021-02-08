@@ -42,7 +42,7 @@ namespace DSAE_HonoursGUI
                               .Where(feed => feed != null)
                               .ToList();
 
-                var testurl = new List<Tuple<string, string>>() { urlList.First() };
+                //var testurl = new List<Tuple<string, string>>() { urlList.First() };
 
                 ReportBox.Text += $"\n {urlList.Count} URLs loaded from RSS feeds";
 
@@ -53,10 +53,10 @@ namespace DSAE_HonoursGUI
                     ReportBox.Text += $"\n {Searchlist.CountofWords()} head words and word variants found in Search List text file";
                     int numScrapped = 0;
                     var ScrappedList =
-                        HTMLScraper.ProcessUrls(testurl).ToList()
+                        HTMLScraper.ProcessUrls(urlList).ToList()
                         .Where(item =>
                         {
-                            ReportBox.Text += $"\n {++numScrapped} URLs out of {testurl.Count} scrapped succesfully";
+                            ReportBox.Text += $"\n {++numScrapped} URLs out of {urlList.Count} scrapped succesfully";
                             return item != null;
                         });
 

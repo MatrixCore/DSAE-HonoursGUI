@@ -165,6 +165,9 @@ namespace DSAEHonoursGUI
             /// List of the variations of the headword
             /// </summary>
             public List<string> WordVars { get; private set; }
+            // TODO: Implement the extraction of Dictionary ID's from the Search List file
+            //       Add DictionaryIDs to the XML output
+            public string DictionaryID { get; set; }
 
             /// <summary>
             /// Simple Constructor
